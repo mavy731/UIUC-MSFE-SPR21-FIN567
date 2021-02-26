@@ -1,0 +1,136 @@
+---
+title: "Fin567 Homework 3"
+date: 2/25/21
+output: pdf_document
+---
+
+Aigerim Tursynbekova aigerim4@illinois.edu
+Junye Qiu junyeq2@illinois.edu
+Dong Zhu dongzhu2@illinois.edu
+Yue Ma yuema4@illinois.edu
+```{r}
+library(fOptions)
+library(mvtnorm)
+library(MASS)
+library(ggplot2)
+library(cvar)
+
+setwd("/home/mavy731/Documents/FIN567")
+K1=100
+K2=100
+K3=120
+S1=97.37
+S2=101.27
+S3=121.34
+t=1/12
+r=0.01
+vol1=0.45
+vol2=0.37
+vol3=0.4
+N1=50000
+N2=50000
+N3=40000
+N=21
+
+```
+Question 1-a
+```{r}
+Call1=CRRBinomialTreeOption('ca',S1,K1,t,r,0,vol1,N,NULL,NULL)@price
+Put1=CRRBinomialTreeOption('pa',S1,K1,t,r,0,vol1,N,NULL,NULL)@price
+Call2=CRRBinomialTreeOption('ca',S2,K2,t,r,0,vol2,N,NULL,NULL)@price
+Put2=CRRBinomialTreeOption('pa',S2,K2,t,r,0,vol2,N,NULL,NULL)@price
+Call3=CRRBinomialTreeOption('ca',S3,K3,t,r,0,vol3,N,NULL,NULL)@price
+Put3=CRRBinomialTreeOption('pa',S3,K3,t,r,0,vol3,N,NULL,NULL)@price
+PortValue=N1*(Call1+Put1)+N2*( Call2+ Put2 )+N3*( Call3 + Put3)
+PortValue
+```
+Question 1-b
+```{r}
+mu1=0.0005
+mu2=0.0004
+mu3=0.0004
+std1=0.028
+std2=0.023
+std3=0.025
+rho=0.4
+n=10000
+mu=c(mu1,mu2,mu3)
+cov=matrix(c(mu1^2,mu1*mu2*rho,mu1*mu3*rho,mu2*mu1*rho,mu2^2,mu2*mu3*rho,mu3*mu1*rho,mu3*mu2*rho,mu3^2),nrow=3,ncol=3)
+returns<-mvrnorm(n,mu,cov,FALSE,FALSE)
+P_L=rep(0,n)
+for (i in 1:n){
+  S1_new=S1*exp(returns[i,1])
+  S2_new=S2*exp(returns[i,2])
+  S3_new=S3*exp(returns[i,3])
+  Call1=CRRBinomialTreeOption('ca',S1_new,K1,t,r,0,vol1,N,NULL,NULL)@price
+  Put1=CRRBinomialTreeOption('pa',S1_new,K1,t,r,0,vol1,N,NULL,NULL)@price
+  Call2=CRRBinomialTreeOption('ca',S2_new,K2,t,r,0,vol2,N,NULL,NULL)@price
+  Put2=CRRBinomialTreeOption('pa',S2_new,K2,t,r,0,vol2,N,NULL,NULL)@price
+  Call3=CRRBinomialTreeOption('ca',S3_new,K3,t,r,0,vol3,N,NULL,NULL)@price
+  Put3=CRRBinomialTreeOption('pa',S3_new,K3,t,r,0,vol3,N,NULL,NULL)@price
+  PortValue_new=N1*(Call1+Put1)+N2*( Call2+ Put2 )+N3*( Call3 + Put3)
+  P_L[i]=PortValue_new - PortValue
+}
+VaR=unname(quantile(P_L,0.01))
+abs(VaR)
+```
+Question 1-c
+```{r}
+hist(P_L,breaks=500,col='red',,main="P/L",ylab=NULL,xlab="P/L")
+```
+Question 1-d
+```{r}
+tmp=P_L[P_L<VaR]
+Cvar=sum(tmp)/(n*0.01)
+abs(Cvar)
+```
+Question 2
+```{r}
+mu_new=c(mu1*21,mu2*21,mu3*21)
+P_L21=rep(0,n)
+returns21<-mvrnorm(n,mu,cov,FALSE,FALSE)
+for (i in 1:n){
+  S1_new=S1*exp(returns21[i,1])
+  S2_new=S2*exp(returns21[i,2])
+  S3_new=S3*exp(returns21[i,3])
+  PortValue_new=N1*(max(0,S1_new-K1)+max(0,K1-S1_new))
+                +N2*(max(0,S2_new-K2)+max(0,K2-S2_new))
+                +N3*(max(0,S3_new-K2)+max(0,K3-S3_new))
+  P_L21[i]=PortValue_new - PortValue
+}
+VaR21=unname(quantile(P_L21,0.01))
+abs(VaR21)
+```
+Question 3
+```{r}
+P_L_t=rep(0,n)
+returns_t<-rmvt(n,cov,4,mu)
+for (i in 1:n){
+  S1_new=S1*exp(returns_t[i,1])
+  S2_new=S2*exp(returns_t[i,2])
+  S3_new=S3*exp(returns_t[i,3])
+  Call1=CRRBinomialTreeOption('ca',S1_new,K1,t,r,0,vol1,N,NULL,NULL)@price
+  Put1=CRRBinomialTreeOption('pa',S1_new,K1,t,r,0,vol1,N,NULL,NULL)@price
+  Call2=CRRBinomialTreeOption('ca',S2_new,K2,t,r,0,vol2,N,NULL,NULL)@price
+  Put2=CRRBinomialTreeOption('pa',S2_new,K2,t,r,0,vol2,N,NULL,NULL)@price
+  Call3=CRRBinomialTreeOption('ca',S3_new,K3,t,r,0,vol3,N,NULL,NULL)@price
+  Put3=CRRBinomialTreeOption('pa',S3_new,K3,t,r,0,vol3,N,NULL,NULL)@price
+  PortValue_new=N1*(Call1+Put1)+N2*( Call2+ Put2 )+N3*( Call3 + Put3)
+  P_L_t[i]=PortValue_new - PortValue
+}
+```
+Question 3-a
+```{r}
+VaR_t=unname(quantile(P_L_t,0.01))
+abs(VaR_t)
+```
+Question 3-b
+```{r}
+hist(P_L_t,breaks=500,col='red',main="P/L t-dirtibution",ylab=NULL,xlab="P/L")
+```
+Question 3-c
+```{r}
+tmp=P_L_t[P_L_t<VaR_t]
+Cvar_t=sum(tmp)/(n*0.01)
+abs(Cvar_t)
+```
